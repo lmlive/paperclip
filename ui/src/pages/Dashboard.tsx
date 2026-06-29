@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@/lib/router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { dashboardApi } from "../api/dashboard";
 import { activityApi } from "../api/activity";
 import { accessApi } from "../api/access";
 import { issuesApi } from "../api/issues";
 import { agentsApi } from "../api/agents";
 import { projectsApi } from "../api/projects";
+import { heartbeatsApi } from "../api/heartbeats";
 import { buildCompanyUserProfileMap } from "../lib/company-members";
 import { useCompany } from "../context/CompanyContext";
 import { useDialogActions } from "../context/DialogContext";
@@ -21,7 +22,7 @@ import { ActivityRow } from "../components/ActivityRow";
 import { Identity } from "../components/Identity";
 import { timeAgo } from "../lib/timeAgo";
 import { cn, formatCents } from "../lib/utils";
-import { Bot, CircleDot, DollarSign, ShieldCheck, LayoutDashboard, PauseCircle, Rocket, ClipboardList, Users, CheckCircle2, AlertCircle } from "lucide-react";
+import { Bot, CircleDot, DollarSign, ShieldCheck, LayoutDashboard, PauseCircle, Rocket, ClipboardList, Users, CheckCircle2, AlertCircle, PlayCircle, Loader2 } from "lucide-react";
 import { ActiveAgentsPanel } from "../components/ActiveAgentsPanel";
 import { ChartCard, RunActivityChart, PriorityChart, IssueStatusChart, SuccessRateChart } from "../components/ActivityCharts";
 import { PageSkeleton } from "../components/PageSkeleton";
@@ -78,16 +79,52 @@ function countIssuesByStatus(issues: Issue[] | undefined) {
 }
 
 function SoloCompanyDashboard({
+  companyId,
   agents,
   issues,
   pendingApprovals,
 }: {
+  companyId: string;
   agents: Agent[];
   issues: Issue[] | undefined;
   pendingApprovals: number;
 }) {
+  const queryClient = useQueryClient();
   const soloEmployees = sortSoloEmployees(agents.filter((agent) => getSoloEmployeeKey(agent)));
+  const ceo = soloEmployees.find((agent) => getSoloEmployeeKey(agent) === "ceo") ?? null;
   const issueCounts = countIssuesByStatus(issues);
+
+  const { data: liveRuns } = useQuery({
+    queryKey: [...queryKeys.liveRuns(companyId), "solo-ceo-operating-loop"],
+    queryFn: () => heartbeatsApi.liveRunsForCompany(companyId, { limit: 20 }),
+    enabled: Boolean(companyId),
+    refetchInterval: 5_000,
+  });
+  const ceoRun = liveRuns?.find((run) => run.agentId === ceo?.id && (run.status === "queued" || run.status === "running")) ?? null;
+  const ceoOperatingLoopActive = Boolean(ceoRun);
+
+  const startCeoMutation = useMutation({
+    mutationFn: async () => {
+      if (!ceo) throw new Error("CEO agent is not available");
+      return agentsApi.invoke(ceo.id, companyId, {
+        triggerDetail: "manual",
+        reason: "Start the solo company CEO operating loop from the dashboard.",
+        forceFreshSession: true,
+        payload: {
+          intent: "solo_company_operating_loop",
+          requestedAction: "Review company state, update the 7-day action plan, identify blockers, and delegate the next tasks.",
+        },
+        idempotencyKey: `solo-ceo-operating-loop:${companyId}:${ceo.id}`,
+      });
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.liveRuns(companyId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(companyId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.activity(companyId) }),
+      ]);
+    },
+  });
   const issuesByAssignee = new Map<string, Issue[]>();
   for (const issue of issues ?? []) {
     if (!issue.assigneeAgentId) continue;
@@ -114,6 +151,15 @@ function SoloCompanyDashboard({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => startCeoMutation.mutate()}
+            disabled={!ceo || ceoOperatingLoopActive || startCeoMutation.isPending}
+            className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {startCeoMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />}
+            {ceoOperatingLoopActive ? "CEO loop running" : startCeoMutation.isPending ? "Starting CEO..." : "Start CEO loop"}
+          </button>
           <Link to="/org" className="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm font-medium no-underline text-foreground hover:bg-accent">
             <Users className="h-4 w-4" /> Org chart
           </Link>
@@ -122,6 +168,9 @@ function SoloCompanyDashboard({
           </Link>
         </div>
       </div>
+      {startCeoMutation.error ? (
+        <p className="mt-3 text-sm text-destructive">{startCeoMutation.error.message}</p>
+      ) : null}
 
       <div className="mt-5 grid gap-3 md:grid-cols-4">
         <div className="rounded-xl border bg-background/70 p-3">
@@ -405,6 +454,7 @@ export function Dashboard() {
 
       {showSoloDashboard && data && (
         <SoloCompanyDashboard
+          companyId={selectedCompanyId!}
           agents={agents ?? []}
           issues={issues}
           pendingApprovals={data.pendingApprovals + data.budgets.pendingApprovals}
@@ -589,4 +639,5 @@ export function Dashboard() {
     </div>
   );
 }
+
 

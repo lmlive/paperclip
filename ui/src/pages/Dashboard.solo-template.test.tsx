@@ -14,7 +14,9 @@ const apiMocks = vi.hoisted(() => ({
   userDirectoryList: vi.fn(),
   issuesList: vi.fn(),
   agentsList: vi.fn(),
+  agentInvoke: vi.fn(),
   projectsList: vi.fn(),
+  liveRunsForCompany: vi.fn(),
 }));
 
 const mockOpenOnboarding = vi.hoisted(() => vi.fn());
@@ -58,7 +60,11 @@ vi.mock("../api/issues", () => ({
 }));
 
 vi.mock("../api/agents", () => ({
-  agentsApi: { list: apiMocks.agentsList },
+  agentsApi: { list: apiMocks.agentsList, invoke: apiMocks.agentInvoke },
+}));
+
+vi.mock("../api/heartbeats", () => ({
+  heartbeatsApi: { liveRunsForCompany: apiMocks.liveRunsForCompany },
 }));
 
 vi.mock("../api/projects", () => ({
@@ -199,6 +205,8 @@ describe("Dashboard solo company cockpit", () => {
     apiMocks.activityList.mockResolvedValue([]);
     apiMocks.userDirectoryList.mockResolvedValue({ users: [] });
     apiMocks.projectsList.mockResolvedValue([]);
+    apiMocks.liveRunsForCompany.mockResolvedValue([]);
+    apiMocks.agentInvoke.mockResolvedValue({ id: "run-1", status: "queued" });
     apiMocks.agentsList.mockResolvedValue([
       makeAgent("ceo"),
       makeAgent("pm"),
@@ -237,5 +245,58 @@ describe("Dashboard solo company cockpit", () => {
     expect(document.body.textContent).toContain("Tech Lead");
     expect(document.body.textContent).toContain("QA/Ops");
     expect(document.body.textContent).toContain("Draft the first 7-day company action plan");
+    expect(document.body.textContent).toContain("Start CEO loop");
+  });
+
+  it("starts the CEO operating loop from the dashboard", async () => {
+    root = renderDashboard(container);
+    await flushReact();
+
+    const button = Array.from(document.body.querySelectorAll("button")).find((entry) =>
+      entry.textContent?.includes("Start CEO loop"),
+    ) as HTMLButtonElement | undefined;
+    expect(button).toBeTruthy();
+
+    await act(async () => {
+      button!.click();
+    });
+    await flushReact();
+
+    expect(apiMocks.agentInvoke).toHaveBeenCalledWith("agent-ceo", "company-1", {
+      triggerDetail: "manual",
+      reason: "Start the solo company CEO operating loop from the dashboard.",
+      forceFreshSession: true,
+      payload: {
+        intent: "solo_company_operating_loop",
+        requestedAction: "Review company state, update the 7-day action plan, identify blockers, and delegate the next tasks.",
+      },
+      idempotencyKey: "solo-ceo-operating-loop:company-1:agent-ceo",
+    });
+  });
+
+  it("disables the CEO operating loop button while a CEO run is live", async () => {
+    apiMocks.liveRunsForCompany.mockResolvedValue([
+      {
+        id: "run-1",
+        status: "running",
+        agentId: "agent-ceo",
+        agentName: "CEO",
+        adapterType: "hermes_local",
+        invocationSource: "on_demand",
+        triggerDetail: "manual",
+        startedAt: null,
+        finishedAt: null,
+        createdAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+    root = renderDashboard(container);
+    await flushReact();
+
+    const button = Array.from(document.body.querySelectorAll("button")).find((entry) =>
+      entry.textContent?.includes("CEO loop running"),
+    ) as HTMLButtonElement | undefined;
+    expect(button).toBeTruthy();
+    expect(button!.disabled).toBe(true);
   });
 });
+
