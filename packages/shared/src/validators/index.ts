@@ -22,6 +22,8 @@ export {
 } from "./budget.js";
 
 export {
+  companyTemplateIdSchema,
+  companyOperatingModeSchema,
   createCompanySchema,
   updateCompanySchema,
   updateCompanyBrandingSchema,

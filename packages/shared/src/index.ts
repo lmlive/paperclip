@@ -979,6 +979,17 @@ export type {
 export type { ServerGitInfo, ServerInfoSnapshot } from "./types/server-info.js";
 
 export {
+  COMPANY_TEMPLATE_IDS,
+  COMPANY_TEMPLATES,
+  SOLO_SOFTWARE_COMPANY_TEMPLATE,
+  isCompanyTemplateId,
+  type CompanyEmployeeTemplate,
+  type CompanyOperatingMode,
+  type CompanyTemplateDefinition,
+  type CompanyTemplateId,
+} from "./company-templates.js";
+
+export {
   getClosedIsolatedExecutionWorkspaceMessage,
   isClosedIsolatedExecutionWorkspace,
 } from "./execution-workspace-guards.js";
@@ -1005,6 +1016,8 @@ export {
 } from "./validators/index.js";
 
 export {
+  companyTemplateIdSchema,
+  companyOperatingModeSchema,
   createCompanySchema,
   updateCompanySchema,
   updateCompanyBrandingSchema,

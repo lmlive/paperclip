@@ -3,6 +3,7 @@ import {
   COMPANY_STATUSES,
   MAX_COMPANY_ATTACHMENT_MAX_BYTES,
 } from "../constants.js";
+import { COMPANY_TEMPLATE_IDS } from "../company-templates.js";
 
 const logoAssetIdSchema = z.string().uuid().nullable().optional();
 const brandColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional();
@@ -13,11 +14,16 @@ const attachmentMaxBytesSchema = z
   .min(1)
   .max(MAX_COMPANY_ATTACHMENT_MAX_BYTES);
 
+export const companyTemplateIdSchema = z.enum(COMPANY_TEMPLATE_IDS);
+export const companyOperatingModeSchema = companyTemplateIdSchema;
+
 export const createCompanySchema = z.object({
   name: z.string().min(1),
   description: z.string().optional().nullable(),
   budgetMonthlyCents: z.number().int().nonnegative().optional().default(0),
   attachmentMaxBytes: attachmentMaxBytesSchema.optional(),
+  templateId: companyTemplateIdSchema.optional().default("blank"),
+  operatingMode: companyOperatingModeSchema.optional().default("blank"),
 });
 
 export type CreateCompany = z.infer<typeof createCompanySchema>;
