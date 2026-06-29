@@ -6,7 +6,7 @@ export type CompanyOperatingMode = CompanyTemplateId;
 export interface CompanyEmployeeTemplate {
   key: string;
   name: string;
-  role: "ceo" | "manager" | "general";
+  role: "ceo" | "cto" | "pm" | "engineer" | "qa" | "general";
   title: string;
   reportsToKey?: string;
   adapterType: string;
@@ -79,7 +79,7 @@ export const SOLO_SOFTWARE_COMPANY_TEMPLATE: CompanyTemplateDefinition = {
     {
       key: "pm",
       name: "PM",
-      role: "manager",
+      role: "pm",
       title: "Product Manager",
       reportsToKey: "ceo",
       adapterType: "hermes_local",
@@ -92,7 +92,7 @@ export const SOLO_SOFTWARE_COMPANY_TEMPLATE: CompanyTemplateDefinition = {
     {
       key: "tech_lead",
       name: "Tech Lead",
-      role: "manager",
+      role: "cto",
       title: "Tech Lead",
       reportsToKey: "ceo",
       adapterType: "hermes_local",
@@ -105,7 +105,7 @@ export const SOLO_SOFTWARE_COMPANY_TEMPLATE: CompanyTemplateDefinition = {
     {
       key: "engineer",
       name: "Engineer",
-      role: "general",
+      role: "engineer",
       title: "Full-stack Engineer",
       reportsToKey: "tech_lead",
       adapterType: "hermes_local",
@@ -118,7 +118,7 @@ export const SOLO_SOFTWARE_COMPANY_TEMPLATE: CompanyTemplateDefinition = {
     {
       key: "qa_ops",
       name: "QA/Ops",
-      role: "general",
+      role: "qa",
       title: "QA & DevOps",
       reportsToKey: "tech_lead",
       adapterType: "hermes_local",

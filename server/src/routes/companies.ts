@@ -25,6 +25,7 @@ import {
   companyArtifactsService,
   companyPortabilityService,
   companyService,
+  companyTemplateService,
   feedbackService,
   logActivity,
 } from "../services/index.js";
@@ -299,7 +300,8 @@ export function companyRoutes(db: Db, storage?: StorageService) {
     if (!(req.actor.source === "local_implicit" || req.actor.isInstanceAdmin)) {
       throw forbidden("Instance admin required");
     }
-    const company = await svc.create(req.body);
+    const { templateId, operatingMode: _operatingMode, ...companyInput } = req.body;
+    const company = await svc.create(companyInput);
     const ownerPrincipalId = req.actor.userId ?? "local-board";
     await access.ensureMembership(company.id, "user", ownerPrincipalId, "owner", "active");
     await access.ensureRoleDefaultGrants(
@@ -328,6 +330,11 @@ export function companyRoutes(db: Db, storage?: StorageService) {
         },
         req.actor.userId ?? "board",
       );
+    }
+    if (templateId && templateId !== "blank") {
+      await companyTemplateService(db).bootstrap(company.id, templateId, {
+        actor: getActorInfo(req),
+      });
     }
     res.status(201).json(company);
   });

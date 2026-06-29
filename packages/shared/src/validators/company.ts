@@ -17,18 +17,21 @@ const attachmentMaxBytesSchema = z
 export const companyTemplateIdSchema = z.enum(COMPANY_TEMPLATE_IDS);
 export const companyOperatingModeSchema = companyTemplateIdSchema;
 
-export const createCompanySchema = z.object({
+const companyCreateBaseSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional().nullable(),
   budgetMonthlyCents: z.number().int().nonnegative().optional().default(0),
   attachmentMaxBytes: attachmentMaxBytesSchema.optional(),
+});
+
+export const createCompanySchema = companyCreateBaseSchema.extend({
   templateId: companyTemplateIdSchema.optional().default("blank"),
   operatingMode: companyOperatingModeSchema.optional().default("blank"),
 });
 
 export type CreateCompany = z.infer<typeof createCompanySchema>;
 
-export const updateCompanySchema = createCompanySchema
+export const updateCompanySchema = companyCreateBaseSchema
   .partial()
   .extend({
     status: z.enum(COMPANY_STATUSES).optional(),
