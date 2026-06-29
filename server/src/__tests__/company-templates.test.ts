@@ -1,3 +1,6 @@
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import {
@@ -26,8 +29,11 @@ if (!embeddedPostgresSupport.supported) {
 }
 
 describeEmbeddedPostgres("companyTemplateService", () => {
+  const originalPaperclipHome = process.env.PAPERCLIP_HOME;
+  const originalPaperclipInstanceId = process.env.PAPERCLIP_INSTANCE_ID;
   let db!: ReturnType<typeof createDb>;
   let tempDb: Awaited<ReturnType<typeof startEmbeddedPostgresTestDatabase>> | null = null;
+  let paperclipHome!: string;
 
   beforeAll(async () => {
     tempDb = await startEmbeddedPostgresTestDatabase("paperclip-company-template-");
@@ -35,6 +41,15 @@ describeEmbeddedPostgres("companyTemplateService", () => {
   }, 20_000);
 
   afterEach(async () => {
+    if (originalPaperclipHome === undefined) delete process.env.PAPERCLIP_HOME;
+    else process.env.PAPERCLIP_HOME = originalPaperclipHome;
+    if (originalPaperclipInstanceId === undefined) delete process.env.PAPERCLIP_INSTANCE_ID;
+    else process.env.PAPERCLIP_INSTANCE_ID = originalPaperclipInstanceId;
+    if (paperclipHome) {
+      await fs.rm(paperclipHome, { recursive: true, force: true });
+      paperclipHome = "";
+    }
+
     await db.delete(activityLog);
     await db.delete(issues);
     await db.delete(projects);
@@ -47,7 +62,11 @@ describeEmbeddedPostgres("companyTemplateService", () => {
     await tempDb?.cleanup();
   });
 
-  it("bootstraps the solo software company org, project, issues, and activity", async () => {
+  it("bootstraps the solo software company org, project, issues, instructions, and activity", async () => {
+    paperclipHome = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-company-template-home-"));
+    process.env.PAPERCLIP_HOME = paperclipHome;
+    process.env.PAPERCLIP_INSTANCE_ID = "company-template-test";
+
     const company = await companyService(db).create({
       name: "Solo Software Co",
       description: "Ship software with AI employees",
@@ -78,6 +97,9 @@ describeEmbeddedPostgres("companyTemplateService", () => {
     const agentRows = await db.select().from(agents).where(eq(agents.companyId, company.id));
     expect(agentRows).toHaveLength(5);
     expect(agentRows.every((agent) => agent.adapterType === "hermes_local")).toBe(true);
+    expect(agentRows.every((agent) => agent.adapterConfig.promptTemplate === undefined)).toBe(true);
+    expect(agentRows.every((agent) => agent.adapterConfig.instructionsBundleMode === "managed")).toBe(true);
+    expect(agentRows.every((agent) => agent.adapterConfig.instructionsEntryFile === "AGENTS.md")).toBe(true);
 
     const byName = new Map(agentRows.map((agent) => [agent.name, agent]));
     const ceo = byName.get("CEO");
@@ -86,6 +108,16 @@ describeEmbeddedPostgres("companyTemplateService", () => {
     expect(byName.get("Tech Lead")).toMatchObject({ role: "cto", reportsTo: ceo?.id });
     expect(byName.get("Engineer")).toMatchObject({ role: "engineer", reportsTo: byName.get("Tech Lead")?.id });
     expect(byName.get("QA/Ops")).toMatchObject({ role: "qa", reportsTo: byName.get("Tech Lead")?.id });
+
+    const ceoInstructionsPath = ceo?.adapterConfig.instructionsFilePath;
+    expect(typeof ceoInstructionsPath).toBe("string");
+    await expect(fs.readFile(ceoInstructionsPath as string, "utf8")).resolves.toContain("# CEO");
+    await expect(fs.readFile(ceoInstructionsPath as string, "utf8")).resolves.toContain("## Operating contract");
+    const engineer = byName.get("Engineer");
+    const engineerInstructionsPath = engineer?.adapterConfig.instructionsFilePath;
+    expect(typeof engineerInstructionsPath).toBe("string");
+    await expect(fs.readFile(engineerInstructionsPath as string, "utf8")).resolves.toContain("# Full-stack Engineer");
+    await expect(fs.readFile(path.join(path.dirname(engineerInstructionsPath as string), "SOP.md"), "utf8")).resolves.toContain("# Full-stack Engineer SOP");
 
     const goalRows = await db.select().from(goals).where(eq(goals.companyId, company.id));
     expect(goalRows).toHaveLength(1);

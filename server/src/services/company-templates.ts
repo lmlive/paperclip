@@ -8,6 +8,7 @@ import { goalService } from "./goals.js";
 import { issueService } from "./issues.js";
 import { projectService } from "./projects.js";
 import { logActivity } from "./activity-log.js";
+import { agentInstructionsService } from "./agent-instructions.js";
 
 interface CompanyTemplateActor {
   actorType: "user" | "agent" | "system" | "plugin";
@@ -38,6 +39,7 @@ export function companyTemplateService(db: Db) {
   const goals = goalService(db);
   const projects = projectService(db);
   const issues = issueService(db);
+  const instructions = agentInstructionsService();
 
   return {
     bootstrap: async (
@@ -88,7 +90,21 @@ export function companyTemplateService(db: Db) {
             companyTemplateId: template.id,
           },
         });
-        agentIdsByTemplateKey[employee.key] = created.id;
+
+        const materialized = await instructions.materializeManagedBundle(
+          created,
+          employee.instructionsBundle.files,
+          {
+            entryFile: employee.instructionsBundle.entryFile,
+            replaceExisting: true,
+            clearLegacyPromptTemplate: true,
+          },
+        );
+        const nextAdapterConfig = { ...materialized.adapterConfig };
+        delete nextAdapterConfig.promptTemplate;
+        delete nextAdapterConfig.bootstrapPromptTemplate;
+        const updated = await agents.update(created.id, { adapterConfig: nextAdapterConfig });
+        agentIdsByTemplateKey[employee.key] = updated?.id ?? created.id;
       }
 
       const projectIdsByTemplateKey: Record<string, string> = {};
