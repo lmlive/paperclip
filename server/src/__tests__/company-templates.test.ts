@@ -6,9 +6,11 @@ import { eq } from "drizzle-orm";
 import {
   activityLog,
   agents,
+  approvals,
   companies,
   createDb,
   goals,
+  issueApprovals,
   issues,
   projects,
 } from "@paperclipai/db";
@@ -51,6 +53,8 @@ describeEmbeddedPostgres("companyTemplateService", () => {
     }
 
     await db.delete(activityLog);
+    await db.delete(issueApprovals);
+    await db.delete(approvals);
     await db.delete(issues);
     await db.delete(projects);
     await db.delete(goals);
@@ -92,7 +96,7 @@ describeEmbeddedPostgres("companyTemplateService", () => {
     expect(result.projectIdsByTemplateKey).toMatchObject({
       delivery_system: expect.any(String),
     });
-    expect(result.issueIds).toHaveLength(5);
+    expect(result.issueIds).toHaveLength(6);
 
     const agentRows = await db.select().from(agents).where(eq(agents.companyId, company.id));
     expect(agentRows).toHaveLength(5);
@@ -135,11 +139,44 @@ describeEmbeddedPostgres("companyTemplateService", () => {
     });
 
     const issueRows = await db.select().from(issues).where(eq(issues.companyId, company.id));
-    expect(issueRows).toHaveLength(5);
+    expect(issueRows).toHaveLength(6);
     expect(issueRows.every((issue) => issue.projectId === projectRows[0]?.id)).toBe(true);
     expect(issueRows.every((issue) => issue.goalId === goalRows[0]?.id)).toBe(true);
     expect(issueRows.every((issue) => issue.originKind === "company_template")).toBe(true);
     expect(issueRows.every((issue) => issue.identifier?.startsWith(`${company.issuePrefix}-`))).toBe(true);
+
+    const policyIssue = issueRows.find(
+      (issue) => issue.title === "Approve the Task → Approval → Execute operating policy",
+    );
+    expect(policyIssue).toMatchObject({
+      priority: "high",
+      assigneeAgentId: ceo?.id,
+    });
+
+    const approvalRows = await db.select().from(approvals).where(eq(approvals.companyId, company.id));
+    expect(approvalRows).toHaveLength(1);
+    expect(approvalRows[0]).toMatchObject({
+      type: "request_board_approval",
+      status: "pending",
+      requestedByAgentId: ceo?.id,
+    });
+    expect(approvalRows[0]?.payload).toMatchObject({
+      title: "Approve solo company Task → Approval → Execute policy",
+      riskClass: "governance",
+      task: "Adopt the default approval gate for governed AI employee actions.",
+    });
+    expect(approvalRows[0]?.payload.governedActions).toContain("production_deploy");
+
+    const issueApprovalRows = await db
+      .select()
+      .from(issueApprovals)
+      .where(eq(issueApprovals.companyId, company.id));
+    expect(issueApprovalRows).toHaveLength(1);
+    expect(issueApprovalRows[0]).toMatchObject({
+      issueId: policyIssue?.id,
+      approvalId: approvalRows[0]?.id,
+      linkedByAgentId: ceo?.id,
+    });
 
     const activityRows = await db
       .select()
@@ -150,7 +187,9 @@ describeEmbeddedPostgres("companyTemplateService", () => {
       templateId: "solo_software_company",
       agentCount: 5,
       projectCount: 1,
-      issueCount: 5,
+      issueCount: 6,
+      approvalCount: 1,
     });
+    expect(activityRows.some((row) => row.action === "approval.created")).toBe(true);
   });
 });

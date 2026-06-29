@@ -9,6 +9,8 @@ import { issueService } from "./issues.js";
 import { projectService } from "./projects.js";
 import { logActivity } from "./activity-log.js";
 import { agentInstructionsService } from "./agent-instructions.js";
+import { approvalService } from "./approvals.js";
+import { issueApprovalService } from "./issue-approvals.js";
 
 interface CompanyTemplateActor {
   actorType: "user" | "agent" | "system" | "plugin";
@@ -40,6 +42,8 @@ export function companyTemplateService(db: Db) {
   const projects = projectService(db);
   const issues = issueService(db);
   const instructions = agentInstructionsService();
+  const approvals = approvalService(db);
+  const issueApprovals = issueApprovalService(db);
 
   return {
     bootstrap: async (
@@ -119,6 +123,7 @@ export function companyTemplateService(db: Db) {
       }
 
       const issueIds: string[] = [];
+      const issueIdsByTitle: Record<string, string> = {};
       for (const issueTemplate of template.defaultIssues) {
         const assigneeAgentId = issueTemplate.assigneeEmployeeKey
           ? agentIdsByTemplateKey[issueTemplate.assigneeEmployeeKey] ?? null
@@ -141,6 +146,51 @@ export function companyTemplateService(db: Db) {
           createdByUserId: actor.actorType === "user" ? actor.actorId : null,
         });
         issueIds.push(created.id);
+        issueIdsByTitle[issueTemplate.title] = created.id;
+      }
+
+      for (const approvalTemplate of template.defaultApprovals ?? []) {
+        const requestedByAgentId = approvalTemplate.requestedByEmployeeKey
+          ? agentIdsByTemplateKey[approvalTemplate.requestedByEmployeeKey] ?? null
+          : null;
+        const linkedIssueId = approvalTemplate.issueTitle
+          ? issueIdsByTitle[approvalTemplate.issueTitle] ?? null
+          : null;
+        const created = await approvals.create(companyId, {
+          type: approvalTemplate.type,
+          requestedByAgentId,
+          requestedByUserId: null,
+          status: "pending",
+          payload: approvalTemplate.payload,
+          decisionNote: null,
+          decidedByUserId: null,
+          decidedAt: null,
+          updatedAt: new Date(),
+        });
+
+        if (linkedIssueId) {
+          await issueApprovals.link(linkedIssueId, created.id, {
+            agentId: requestedByAgentId,
+            userId: null,
+          });
+        }
+
+        await logActivity(db, {
+          companyId,
+          actorType: actor.actorType,
+          actorId: actor.actorId,
+          agentId: actor.agentId ?? null,
+          runId: actor.runId ?? null,
+          action: "approval.created",
+          entityType: "approval",
+          entityId: created.id,
+          details: {
+            type: created.type,
+            source: "company_template",
+            templateId: template.id,
+            issueIds: linkedIssueId ? [linkedIssueId] : [],
+          },
+        });
       }
 
       await logActivity(db, {
@@ -157,6 +207,7 @@ export function companyTemplateService(db: Db) {
           agentCount: Object.keys(agentIdsByTemplateKey).length,
           projectCount: Object.keys(projectIdsByTemplateKey).length,
           issueCount: issueIds.length,
+          approvalCount: template.defaultApprovals?.length ?? 0,
           goalId: rootGoal.id,
         },
       });

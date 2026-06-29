@@ -38,6 +38,12 @@ export interface CompanyTemplateDefinition {
     projectKey?: string;
     priority?: "critical" | "high" | "medium" | "low";
   }>;
+  defaultApprovals?: Array<{
+    type: "request_board_approval";
+    requestedByEmployeeKey?: string;
+    issueTitle?: string;
+    payload: Record<string, unknown>;
+  }>;
 }
 
 const hermesRuntimeConfig = {
@@ -69,7 +75,9 @@ const sharedOperatingSop = `## Operating contract
 - You are one AI employee inside a 1-person company controlled by a human board.
 - Treat Paperclip issues as the source of truth for work. Work only on assigned issues unless your role explicitly delegates or plans work.
 - Keep outputs inspectable: summarize decisions, cite task/project IDs when known, and attach or link evidence when you produce artifacts.
+- Use the Task → Approval → Execute workflow for governed work: describe the task and risk in an issue, create/link a board approval, wait for approval, then execute only the approved scope.
 - Ask the board for approval before irreversible, external, or expensive actions: production deploys, purchases, credential changes, broad deletes, public communications, or hiring/terminating agents.
+- Approval requests must include task, risk class, expected action, rollback plan, cost impact, and evidence required.
 - Prefer small, verifiable steps. If blocked, state the blocker, impact, and the exact board decision or teammate action needed.
 
 ## Standard response shape
@@ -305,6 +313,43 @@ export const SOLO_SOFTWARE_COMPANY_TEMPLATE: CompanyTemplateDefinition = {
       projectKey: "delivery_system",
       priority: "medium",
     },
+    {
+      title: "Approve the Task → Approval → Execute operating policy",
+      description: "Review and approve the default governance policy for high-risk work. Until approved, AI employees must treat governed actions as blocked and request board approval before execution.",
+      assigneeEmployeeKey: "ceo",
+      projectKey: "delivery_system",
+      priority: "high",
+    },
+  ],
+  defaultApprovals: [
+    {
+      type: "request_board_approval",
+      requestedByEmployeeKey: "ceo",
+      issueTitle: "Approve the Task → Approval → Execute operating policy",
+      payload: {
+        title: "Approve solo company Task → Approval → Execute policy",
+        riskClass: "governance",
+        task: "Adopt the default approval gate for governed AI employee actions.",
+        expectedAction: "Board reviews and approves, rejects, or requests revision of the solo company operating policy.",
+        governedActions: [
+          "production_deploy",
+          "purchase_or_paid_service",
+          "credential_or_secret_change",
+          "broad_delete_or_destructive_migration",
+          "public_communication",
+          "hire_or_terminate_agent",
+        ],
+        policy: "For governed work, the responsible employee must create or update an issue, create and link a board approval, wait for approval, execute only the approved scope, and return evidence before closure.",
+        rollbackPlan: "If rejected or revised, keep the linked task blocked and update the issue with the board decision. If an approved action fails, stop, preserve logs/artifacts, and request a follow-up approval before retrying with broader scope.",
+        costImpact: "No direct cost for approving the policy; future governed actions must state their own cost impact.",
+        evidenceRequired: [
+          "linked Paperclip issue",
+          "approval decision note",
+          "execution summary",
+          "validation command output or artifact link when work executes",
+        ],
+      },
+    },
   ],
 };
 
@@ -316,6 +361,7 @@ export const COMPANY_TEMPLATES: Record<CompanyTemplateId, CompanyTemplateDefinit
     employees: [],
     defaultProjects: [],
     defaultIssues: [],
+    defaultApprovals: [],
   },
   solo_software_company: SOLO_SOFTWARE_COMPANY_TEMPLATE,
 };
