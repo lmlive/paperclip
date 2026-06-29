@@ -28,6 +28,8 @@ interface CompanyContextValue {
     name: string;
     description?: string | null;
     budgetMonthlyCents?: number;
+    templateId?: import("@paperclipai/shared").CompanyTemplateId;
+    operatingMode?: import("@paperclipai/shared").CompanyOperatingMode;
   }) => Promise<Company>;
 }
 
@@ -117,6 +119,8 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       name: string;
       description?: string | null;
       budgetMonthlyCents?: number;
+      templateId?: import("@paperclipai/shared").CompanyTemplateId;
+      operatingMode?: import("@paperclipai/shared").CompanyOperatingMode;
     }) =>
       companiesApi.create(data),
     onSuccess: (company) => {
@@ -130,6 +134,8 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       name: string;
       description?: string | null;
       budgetMonthlyCents?: number;
+      templateId?: import("@paperclipai/shared").CompanyTemplateId;
+      operatingMode?: import("@paperclipai/shared").CompanyOperatingMode;
     }) => {
       return createMutation.mutateAsync(data);
     },

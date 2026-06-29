@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AdapterEnvironmentTestResult } from "@paperclipai/shared";
+import type { AdapterEnvironmentTestResult, CompanyTemplateId } from "@paperclipai/shared";
 import { useLocation, useNavigate, useParams } from "@/lib/router";
 import { useDialog } from "../context/DialogContext";
 import { useCompany } from "../context/CompanyContext";
@@ -155,6 +155,9 @@ export function OnboardingWizard() {
   const [companyGoal, setCompanyGoal] = useState((saved?.companyGoal as string) ?? "");
   const [missionPath, setMissionPath] = useState<"direct" | "questionnaire" | null>((saved?.missionPath as "direct" | "questionnaire" | null) ?? null);
   const [missionConfirmed, setMissionConfirmed] = useState((saved?.missionConfirmed as boolean) ?? false);
+  const [companyTemplateId, setCompanyTemplateId] = useState<CompanyTemplateId>(
+    (saved?.companyTemplateId as CompanyTemplateId) ?? "blank",
+  );
   // Questionnaire answers
   const [q1, setQ1] = useState((saved?.q1 as string) ?? ""); // What do you do?
   const [q2, setQ2] = useState((saved?.q2 as string) ?? ""); // Who do you serve?
@@ -230,7 +233,7 @@ export function OnboardingWizard() {
   useEffect(() => {
     if (!effectiveOnboardingOpen) return;
     const state = {
-      step, companyName, companyGoal, missionPath, missionConfirmed,
+      step, companyName, companyGoal, missionPath, missionConfirmed, companyTemplateId,
       q1, q2, q3, q4, agentName, adapterType, cwd, model, command, args, url,
       createdCompanyId, createdCompanyPrefix, createdAgentId,
       createdCompanyGoalId, createdProjectId, createdIssueRef,
@@ -239,7 +242,7 @@ export function OnboardingWizard() {
     localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(state));
   }, [
     effectiveOnboardingOpen, step, companyName, companyGoal, missionPath, missionConfirmed,
-    q1, q2, q3, q4, agentName, adapterType, cwd, model, command, args, url,
+    q1, q2, q3, q4, companyTemplateId, agentName, adapterType, cwd, model, command, args, url,
     createdCompanyId, createdCompanyPrefix, createdAgentId,
     createdCompanyGoalId, createdProjectId, createdIssueRef,
     onboardingPath, growWorkflows, growPainPoints, growAutomate,
@@ -370,6 +373,7 @@ export function OnboardingWizard() {
     setCompanyGoal("");
     setMissionPath(null);
     setMissionConfirmed(false);
+    setCompanyTemplateId("blank");
     setQ1("");
     setQ2("");
     setQ3("");
@@ -544,11 +548,28 @@ export function OnboardingWizard() {
     setLoading(true);
     setError(null);
     try {
-      const company = await companiesApi.create({ name: companyName.trim() });
+      const useSoloTemplate = companyTemplateId === "solo_software_company";
+      const company = await companiesApi.create({
+        name: companyName.trim(),
+        ...(useSoloTemplate
+          ? {
+              templateId: "solo_software_company",
+              operatingMode: "solo_software_company",
+            }
+          : {}),
+      });
       setCreatedCompanyId(company.id);
       setCreatedCompanyPrefix(company.issuePrefix);
       setSelectedCompanyId(company.id);
       queryClient.invalidateQueries({ queryKey: queryKeys.companies.all });
+
+      if (useSoloTemplate) {
+        localStorage.removeItem(ONBOARDING_STORAGE_KEY);
+        closeOnboarding();
+        setRouteDismissed(true);
+        navigate(`/${company.issuePrefix}/org`);
+        return;
+      }
 
       const parsedGoal = parseOnboardingGoalInput(companyGoal);
       const goal = await goalsApi.create(company.id, {
@@ -1190,6 +1211,47 @@ export function OnboardingWizard() {
                       >
                         ← Back to questions
                       </button>
+                    </div>
+                  )}
+
+                  {/* Company template selector */}
+                  {companyGoal.trim() && (
+                    <div className="space-y-2">
+                      <label className="text-xs text-foreground block">
+                        Choose a company template
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          className={cn(
+                            "flex flex-col items-start gap-1.5 rounded-md border p-3 text-left text-xs transition-colors",
+                            companyTemplateId === "blank"
+                              ? "border-foreground bg-accent/50"
+                              : "border-border hover:bg-accent/50",
+                          )}
+                          onClick={() => setCompanyTemplateId("blank")}
+                        >
+                          <span className="font-medium">Blank company</span>
+                          <span className="text-muted-foreground text-[10px]">
+                            Start with one lead agent and configure the org manually.
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          className={cn(
+                            "flex flex-col items-start gap-1.5 rounded-md border p-3 text-left text-xs transition-colors",
+                            companyTemplateId === "solo_software_company"
+                              ? "border-foreground bg-accent/50"
+                              : "border-border hover:bg-accent/50",
+                          )}
+                          onClick={() => setCompanyTemplateId("solo_software_company")}
+                        >
+                          <span className="font-medium">1-person software company</span>
+                          <span className="text-muted-foreground text-[10px]">
+                            Bootstrap CEO, PM, Tech Lead, Engineer, QA/Ops, project, and issues.
+                          </span>
+                        </button>
+                      </div>
                     </div>
                   )}
 

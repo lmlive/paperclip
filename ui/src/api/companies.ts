@@ -1,5 +1,6 @@
 import type {
   Company,
+  CompanyOperatingMode,
   CompanyPortabilityExportRequest,
   CompanyPortabilityExportPreviewResult,
   CompanyPortabilityExportResult,
@@ -7,6 +8,7 @@ import type {
   CompanyPortabilityImportResult,
   CompanyPortabilityPreviewRequest,
   CompanyPortabilityPreviewResult,
+  CompanyTemplateId,
   UpdateCompanyBranding,
 } from "@paperclipai/shared";
 import { api } from "./client";
@@ -21,6 +23,8 @@ export const companiesApi = {
     name: string;
     description?: string | null;
     budgetMonthlyCents?: number;
+    templateId?: CompanyTemplateId;
+    operatingMode?: CompanyOperatingMode;
   }) =>
     api.post<Company>("/companies", data),
   update: (
