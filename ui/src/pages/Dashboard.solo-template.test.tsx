@@ -4,7 +4,7 @@ import { act } from "react";
 import type { ComponentProps, ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { Agent, DashboardSummary, Issue } from "@paperclipai/shared";
+import type { Agent, Approval, DashboardSummary, Issue } from "@paperclipai/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Dashboard } from "./Dashboard";
 
@@ -15,6 +15,7 @@ const apiMocks = vi.hoisted(() => ({
   issuesList: vi.fn(),
   agentsList: vi.fn(),
   agentInvoke: vi.fn(),
+  approvalsList: vi.fn(),
   projectsList: vi.fn(),
   liveRunsForCompany: vi.fn(),
 }));
@@ -61,6 +62,10 @@ vi.mock("../api/issues", () => ({
 
 vi.mock("../api/agents", () => ({
   agentsApi: { list: apiMocks.agentsList, invoke: apiMocks.agentInvoke },
+}));
+
+vi.mock("../api/approvals", () => ({
+  approvalsApi: { list: apiMocks.approvalsList },
 }));
 
 vi.mock("../api/heartbeats", () => ({
@@ -159,6 +164,28 @@ function makeIssue(overrides: Partial<Issue> = {}): Issue {
   };
 }
 
+function makeApproval(overrides: Partial<Approval> = {}): Approval {
+  return {
+    id: "approval-1",
+    companyId: "company-1",
+    type: "request_board_approval",
+    requestedByAgentId: "agent-ceo",
+    requestedByUserId: null,
+    status: "pending",
+    payload: {
+      title: "Approve solo company Task → Approval → Execute policy",
+      summary: "Govern risky AI employee work with board approval before execution.",
+      riskClass: "governance",
+    },
+    decisionNote: null,
+    decidedByUserId: null,
+    decidedAt: null,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    ...overrides,
+  };
+}
+
 const summary: DashboardSummary = {
   companyId: "company-1",
   agents: { active: 5, running: 0, paused: 0, error: 0 },
@@ -171,6 +198,8 @@ const summary: DashboardSummary = {
 
 async function flushReact() {
   await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
     await new Promise((resolve) => setTimeout(resolve, 0));
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
@@ -205,6 +234,7 @@ describe("Dashboard solo company cockpit", () => {
     apiMocks.activityList.mockResolvedValue([]);
     apiMocks.userDirectoryList.mockResolvedValue({ users: [] });
     apiMocks.projectsList.mockResolvedValue([]);
+    apiMocks.approvalsList.mockResolvedValue([makeApproval()]);
     apiMocks.liveRunsForCompany.mockResolvedValue([]);
     apiMocks.agentInvoke.mockResolvedValue({ id: "run-1", status: "queued" });
     apiMocks.agentsList.mockResolvedValue([
@@ -246,6 +276,21 @@ describe("Dashboard solo company cockpit", () => {
     expect(document.body.textContent).toContain("QA/Ops");
     expect(document.body.textContent).toContain("Draft the first 7-day company action plan");
     expect(document.body.textContent).toContain("Start CEO loop");
+  });
+
+  it("surfaces pending approvals in the solo cockpit", async () => {
+    root = renderDashboard(container);
+    await flushReact();
+
+    expect(apiMocks.approvalsList).toHaveBeenCalledWith("company-1", "pending");
+    expect(document.body.textContent).toContain("Pending board approvals");
+    expect(document.body.textContent).toContain("Approve solo company Task → Approval → Execute policy");
+    expect(document.body.textContent).toContain("Requested by");
+    expect(document.body.textContent).toContain("CEO");
+    const approvalLink = Array.from(document.body.querySelectorAll("a")).find((entry) =>
+      entry.textContent?.includes("Open approval"),
+    ) as HTMLAnchorElement | undefined;
+    expect(approvalLink?.getAttribute("href")).toBe("/approvals/approval-1");
   });
 
   it("starts the CEO operating loop from the dashboard", async () => {
@@ -299,4 +344,3 @@ describe("Dashboard solo company cockpit", () => {
     expect(button!.disabled).toBe(true);
   });
 });
-

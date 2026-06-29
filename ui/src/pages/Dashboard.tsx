@@ -8,6 +8,7 @@ import { issuesApi } from "../api/issues";
 import { agentsApi } from "../api/agents";
 import { projectsApi } from "../api/projects";
 import { heartbeatsApi } from "../api/heartbeats";
+import { approvalsApi } from "../api/approvals";
 import { buildCompanyUserProfileMap } from "../lib/company-members";
 import { useCompany } from "../context/CompanyContext";
 import { useDialogActions } from "../context/DialogContext";
@@ -26,7 +27,7 @@ import { Bot, CircleDot, DollarSign, ShieldCheck, LayoutDashboard, PauseCircle, 
 import { ActiveAgentsPanel } from "../components/ActiveAgentsPanel";
 import { ChartCard, RunActivityChart, PriorityChart, IssueStatusChart, SuccessRateChart } from "../components/ActivityCharts";
 import { PageSkeleton } from "../components/PageSkeleton";
-import { AGENT_ROLE_LABELS, type Agent, type Issue } from "@paperclipai/shared";
+import { AGENT_ROLE_LABELS, type Agent, type Approval, type Issue } from "@paperclipai/shared";
 import { PluginSlotOutlet } from "@/plugins/slots";
 
 const DASHBOARD_ACTIVITY_LIMIT = 10;
@@ -83,11 +84,13 @@ function SoloCompanyDashboard({
   agents,
   issues,
   pendingApprovals,
+  pendingApprovalItems,
 }: {
   companyId: string;
   agents: Agent[];
   issues: Issue[] | undefined;
   pendingApprovals: number;
+  pendingApprovalItems: Approval[] | undefined;
 }) {
   const queryClient = useQueryClient();
   const soloEmployees = sortSoloEmployees(agents.filter((agent) => getSoloEmployeeKey(agent)));
@@ -136,6 +139,19 @@ function SoloCompanyDashboard({
     .filter((issue) => issue.status !== "done" && issue.status !== "cancelled")
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 5);
+  const approvalsToReview = (pendingApprovalItems ?? [])
+    .filter((approval) => approval.status === "pending" || approval.status === "revision_requested")
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 3);
+  const requesterName = (approval: Approval) => {
+    if (!approval.requestedByAgentId) return "Board";
+    return agents.find((agent) => agent.id === approval.requestedByAgentId)?.name ?? "AI employee";
+  };
+  const approvalTitle = (approval: Approval) => {
+    const payload = approval.payload as Record<string, unknown>;
+    const value = payload.title ?? payload.summary ?? payload.recommendedAction ?? approval.type;
+    return String(value);
+  };
 
   return (
     <section className="rounded-2xl border border-primary/20 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.18),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.01))] p-4 shadow-sm sm:p-5">
@@ -170,6 +186,38 @@ function SoloCompanyDashboard({
       </div>
       {startCeoMutation.error ? (
         <p className="mt-3 text-sm text-destructive">{startCeoMutation.error.message}</p>
+      ) : null}
+
+      {approvalsToReview.length > 0 ? (
+        <div className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                <ShieldCheck className="h-4 w-4" />
+                Pending board approvals
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">Review these before AI employees execute governed or risky work.</p>
+            </div>
+            <Link to="/approvals" className="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm font-medium no-underline text-foreground hover:bg-accent">
+              Review all approvals
+            </Link>
+          </div>
+          <div className="mt-4 grid gap-2">
+            {approvalsToReview.map((approval) => (
+              <Link
+                key={approval.id}
+                to={`/approvals/${approval.id}`}
+                className="flex flex-col gap-2 rounded-lg border bg-card px-3 py-2 no-underline text-card-foreground hover:bg-accent/50 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{approvalTitle(approval)}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">Requested by {requesterName(approval)} · {timeAgo(approval.createdAt)}</p>
+                </div>
+                <span className="shrink-0 text-xs font-medium text-primary">Open approval</span>
+              </Link>
+            ))}
+          </div>
+        </div>
       ) : null}
 
       <div className="mt-5 grid gap-3 md:grid-cols-4">
@@ -303,6 +351,12 @@ export function Dashboard() {
   const { data: issues } = useQuery({
     queryKey: queryKeys.issues.list(selectedCompanyId!),
     queryFn: () => issuesApi.list(selectedCompanyId!),
+    enabled: !!selectedCompanyId,
+  });
+
+  const { data: pendingApprovalItems } = useQuery({
+    queryKey: queryKeys.approvals.list(selectedCompanyId!, "pending"),
+    queryFn: () => approvalsApi.list(selectedCompanyId!, "pending"),
     enabled: !!selectedCompanyId,
   });
 
@@ -458,6 +512,7 @@ export function Dashboard() {
           agents={agents ?? []}
           issues={issues}
           pendingApprovals={data.pendingApprovals + data.budgets.pendingApprovals}
+          pendingApprovalItems={pendingApprovalItems}
         />
       )}
 
@@ -639,5 +694,3 @@ export function Dashboard() {
     </div>
   );
 }
-
-
