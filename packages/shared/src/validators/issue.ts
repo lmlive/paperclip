@@ -280,7 +280,7 @@ const RESOLVE_ISSUE_RECOVERY_ACTION_OUTCOMES = [
 export const resolveIssueRecoveryActionSchema = z.object({
   actionId: z.string().uuid().optional(),
   outcome: z.enum(RESOLVE_ISSUE_RECOVERY_ACTION_OUTCOMES),
-  sourceIssueStatus: z.enum(["todo", "done", "in_review", "blocked"]),
+  sourceIssueStatus: z.enum(["todo", "done", "in_review", "blocked", "cancelled"]),
   resolutionNote: multilineTextSchema.optional().nullable(),
 }).strict().superRefine((value, ctx) => {
   if (value.outcome === "restored") {
@@ -309,7 +309,7 @@ export const resolveIssueRecoveryActionSchema = z.object({
     return;
   }
 
-  if (value.outcome === "false_positive" || value.outcome === "cancelled") {
+  if (value.outcome === "false_positive") {
     if (
       value.sourceIssueStatus !== "done" &&
       value.sourceIssueStatus !== "in_review"
@@ -317,6 +317,17 @@ export const resolveIssueRecoveryActionSchema = z.object({
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "This recovery outcome requires sourceIssueStatus to be done or in_review",
+        path: ["sourceIssueStatus"],
+      });
+    }
+    return;
+  }
+
+  if (value.outcome === "cancelled") {
+    if (value.sourceIssueStatus !== "cancelled") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Cancelled recovery actions must move the source issue to cancelled",
         path: ["sourceIssueStatus"],
       });
     }

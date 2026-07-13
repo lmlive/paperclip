@@ -42,6 +42,7 @@ export interface TrustAuthorizationPolicy extends Record<string, unknown> {
   trustPreset?: TrustPreset;
   reviewPreset?: LowTrustReviewPresetPolicy;
   trustBoundary?: LowTrustBoundary;
+  governedActions?: string[];
 }
 
 export type SourceTrustArtifactKind = "issue" | "comment" | "document" | "work_product";

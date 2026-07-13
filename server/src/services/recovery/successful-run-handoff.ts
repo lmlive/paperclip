@@ -23,6 +23,12 @@ export const SUCCESSFUL_RUN_HANDOFF_OPTIONS = [
   "delegate_or_continue_from_checkpoint",
 ] as const;
 
+export const SUCCESSFUL_RUN_HANDOFF_DISPOSITION_PROTOCOL = {
+  version: 1,
+  field: "paperclip_disposition",
+  outcomes: ["done", "cancelled", "in_review", "blocked", "todo"] as const,
+} as const;
+
 const PRODUCTIVE_SUCCESS_LIVENESS_STATES = new Set<RunLivenessState>([
   "advanced",
   "completed",
@@ -316,6 +322,16 @@ export function buildSuccessfulRunHandoffInstruction(input: {
   sourceRunId: string;
 }) {
   const issueLabel = input.issueIdentifier ?? "this issue";
+  const dispositionEnvelope = JSON.stringify({
+    paperclip_disposition: {
+      version: SUCCESSFUL_RUN_HANDOFF_DISPOSITION_PROTOCOL.version,
+      sourceRunId: input.sourceRunId,
+      outcome: "done | cancelled | in_review | blocked | todo",
+      reason: "one concise sentence",
+      nextAction: "required unless outcome is done or cancelled",
+      resumeFromRunId: input.sourceRunId,
+    },
+  }, null, 2);
   return [
     `Your previous run on ${issueLabel} succeeded, but the issue is still in \`in_progress\` and Paperclip cannot identify a valid issue disposition.`,
     "",
@@ -332,6 +348,9 @@ export function buildSuccessfulRunHandoffInstruction(input: {
     "",
     "**Is there more work to do?**",
     `4. Either delegate follow-up work (create/link a follow-up issue and block this one on it, or close this issue if its scope is independently complete) or record an explicit continuation path with \`resumeIntent: true\`, \`resumeFromRunId: ${input.sourceRunId}\`, and a concrete next action. Do not perform the remaining source work in this recovery run; the follow-up/resume wake must use the normal model lane.`,
+    "",
+    "After performing the action, end your final response with this structured disposition envelope. Replace the placeholders with the single outcome you chose; do not include multiple outcomes:",
+    dispositionEnvelope,
     "",
     "Comments, document revisions, work-product writes, and continuation summaries are supporting evidence only — they do not satisfy this handoff unless the issue state/path also records one valid disposition. If this wake is status-only recovery, document or plan updates are not allowed.",
   ].join("\n");
@@ -408,6 +427,7 @@ export function decideSuccessfulRunHandoff(input: {
     handoffRequired: true,
     handoffReason: SUCCESSFUL_RUN_MISSING_STATE_REASON,
     missingDisposition: "clear_next_step",
+    dispositionProtocol: SUCCESSFUL_RUN_HANDOFF_DISPOSITION_PROTOCOL,
     validDispositionOptions: [...SUCCESSFUL_RUN_HANDOFF_OPTIONS],
     detectedProgressSummary: input.detectedProgressSummary,
     handoffAttempt: 1,

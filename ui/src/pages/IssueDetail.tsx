@@ -1932,7 +1932,7 @@ export function IssueDetail() {
     mutationFn: (data: {
       actionId?: string;
       outcome: ResolveRecoveryActionOutcome;
-      sourceIssueStatus: "todo" | "done" | "in_review" | "blocked";
+      sourceIssueStatus: "todo" | "done" | "in_review" | "blocked" | "cancelled";
       resolutionNote?: string | null;
     }) => issuesApi.resolveRecoveryAction(issueId!, data),
     onSuccess: ({ issue: nextIssue }) => {
@@ -3345,6 +3345,9 @@ export function IssueDetail() {
           return;
         case "done":
           void resolveRecoveryAction.mutateAsync({ actionId, outcome: "restored", sourceIssueStatus: "done" });
+          return;
+        case "cancelled":
+          void resolveRecoveryAction.mutateAsync({ actionId, outcome: "cancelled", sourceIssueStatus: "cancelled" });
           return;
         case "in_review":
           void resolveRecoveryAction.mutateAsync({ actionId, outcome: "restored", sourceIssueStatus: "in_review" });

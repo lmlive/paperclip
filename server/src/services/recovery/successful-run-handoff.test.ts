@@ -72,6 +72,11 @@ describe("successful run handoff decision", () => {
       handoffRequired: true,
       handoffReason: SUCCESSFUL_RUN_MISSING_STATE_REASON,
       missingDisposition: "clear_next_step",
+      dispositionProtocol: {
+        version: 1,
+        field: "paperclip_disposition",
+        outcomes: ["done", "cancelled", "in_review", "blocked", "todo"],
+      },
       handoffAttempt: 1,
       maxHandoffAttempts: 1,
       resumeIntent: true,
@@ -92,6 +97,8 @@ describe("successful run handoff decision", () => {
     expect(decision.instruction).toContain("Resolve the missing disposition before creating or revising any new artifacts");
     expect(decision.instruction).toContain("Choose **exactly one** outcome");
     expect(decision.instruction).toContain("record an explicit continuation path");
+    expect(decision.instruction).toContain("paperclip_disposition");
+    expect(decision.instruction).toContain("sourceRunId");
   });
 
   it("does not queue when the issue already has a valid disposition", () => {

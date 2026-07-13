@@ -50,6 +50,7 @@ type TransitionInput = {
   commentBody?: string | null;
   reviewRequest?: IssueExecutionState["reviewRequest"] | null;
   monitorExplicitlyUpdated?: boolean;
+  approvedGovernedActions?: string[];
 };
 
 type TransitionResult = {
@@ -309,6 +310,26 @@ function nextAssigneeIds(input: {
         ? input.requestedAssigneePatch.assigneeUserId ?? null
         : input.issue.assigneeUserId ?? null;
   return { assigneeAgentId, assigneeUserId };
+}
+
+function normalizeGovernedActionSet(actions: string[] | null | undefined) {
+  return new Set(
+    (actions ?? [])
+      .map((action) => action.trim())
+      .filter((action) => action.length > 0),
+  );
+}
+
+function assertApprovedGovernedActions(input: TransitionInput) {
+  if (input.requestedStatus !== "done") return;
+  const governedActions = normalizeGovernedActionSet(input.policy?.authorizationPolicy?.governedActions);
+  if (governedActions.size === 0) return;
+
+  const approvedActions = normalizeGovernedActionSet(input.approvedGovernedActions);
+  const missingActions = Array.from(governedActions).filter((action) => !approvedActions.has(action));
+  if (missingActions.length === 0) return;
+
+  throw unprocessable("Governed action requires approved board approval", { governedActions: missingActions });
 }
 
 export function stripMonitorFromExecutionPolicy(policy: IssueExecutionPolicy | null): IssueExecutionPolicy | null {
@@ -1048,6 +1069,7 @@ export function buildIssueMonitorClearedPatch(input: {
 }
 
 export function applyIssueExecutionPolicyTransition(input: TransitionInput): TransitionResult {
+  assertApprovedGovernedActions(input);
   const stageResult = applyIssueExecutionStageTransition(input);
   const monitorPatch = applyMonitorTransition(input, stageResult.patch);
   Object.assign(stageResult.patch, monitorPatch);

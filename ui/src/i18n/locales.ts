@@ -2,7 +2,14 @@ import type { Resource } from "i18next";
 
 import { assertValidLocaleMessages } from "./locale-validation";
 
-export const DEFAULT_LOCALE = "en" as const;
+export const DEFAULT_LOCALE = "zh-CN" as const;
+export const LANGUAGE_STORAGE_KEY = "paperclip.language" as const;
+export const selectableLocales = ["zh-CN", "en"] as const;
+
+export const localeLabels: Record<(typeof selectableLocales)[number], string> = {
+  "zh-CN": "简体中文",
+  en: "English",
+};
 
 const localeModules = import.meta.glob("./locales/*.json", {
   eager: true,

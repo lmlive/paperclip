@@ -96,17 +96,17 @@ describe("issue validators", () => {
     expect(
       resolveIssueRecoveryActionSchema.parse({
         outcome: "cancelled",
-        sourceIssueStatus: "in_review",
+        sourceIssueStatus: "cancelled",
       }),
     ).toMatchObject({
       outcome: "cancelled",
-      sourceIssueStatus: "in_review",
+      sourceIssueStatus: "cancelled",
     });
 
     expect(
       resolveIssueRecoveryActionSchema.safeParse({
         outcome: "cancelled",
-        sourceIssueStatus: "blocked",
+        sourceIssueStatus: "in_review",
       }).success,
     ).toBe(false);
 

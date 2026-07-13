@@ -35,6 +35,7 @@ export const trustAuthorizationPolicySchema = z.object({
   trustPreset: trustPresetSchema.optional(),
   reviewPreset: lowTrustReviewPresetPolicySchema.optional(),
   trustBoundary: lowTrustBoundarySchema.optional(),
+  governedActions: z.array(z.string().trim().min(1)).optional(),
 }).catchall(z.unknown());
 
 export const sourceTrustArtifactKindSchema = z.enum(["issue", "comment", "document", "work_product"]);

@@ -1,5 +1,11 @@
 export { companyService } from "./companies.js";
 export { companyTemplateService } from "./company-templates.js";
+export {
+  getOnePersonCompanyEmployeePreset,
+  getOnePersonCompanyPromptTemplate,
+  listOnePersonCompanyEmployeePresets,
+  type SoloCompanyEmployeeKey,
+} from "./one-person-company-prompts.js";
 export { companyArtifactsService } from "./company-artifacts.js";
 export { companySearchService } from "./company-search.js";
 export { feedbackService } from "./feedback.js";
@@ -58,6 +64,7 @@ export {
 } from "./productivity-review.js";
 export { classifyIssueGraphLiveness, type IssueLivenessFinding } from "./recovery/index.js";
 export { dashboardService } from "./dashboard.js";
+export { soloCompanyDashboardService } from "./solo-company-dashboard.js";
 export { sidebarBadgeService } from "./sidebar-badges.js";
 export { sidebarPreferenceService } from "./sidebar-preferences.js";
 export { resourceMembershipService, type ResourceMembershipPolicyHook } from "./resource-memberships.js";

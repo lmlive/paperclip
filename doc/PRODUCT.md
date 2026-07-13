@@ -109,6 +109,7 @@ Paperclip’s core identity is a **control plane for autonomous AI companies**, 
 - Make the first five minutes feel magical: install, answer a few questions, see a CEO do something real.
 - Keep work anchored to **issues/comments/projects/goals**, even if the surface feels conversational.
 - Treat **agency / internal team / startup** as the same underlying abstraction with different templates and labels.
+- Treat the `solo_software_company` template as a first-class solo-operator path: it bootstraps CEO, PM, Tech Lead, Engineer, QA/Ops, startup tasks, a governed-action approval, and a dashboard cockpit without changing Paperclip’s company control-plane boundary.
 - Make outputs first-class: files, docs, reports, previews, links, screenshots.
 - Provide **hooks into engineering workflows**: worktrees, preview servers, PR links, external review tools.
 - Use **plugins** for edge cases like rich chat, knowledge bases, doc editors, custom tracing.

@@ -497,6 +497,31 @@ async function buildIssueWorkspaceChangeActivityDetails(
   };
 }
 
+
+function collectApprovedGovernedActionsFromLinkedApprovals(
+  linkedApprovals: Array<{ status: string; type: string; payload: unknown }>,
+) {
+  const approvedActions = new Set<string>();
+  for (const approval of linkedApprovals) {
+    if (approval.status !== "approved" || approval.type !== "request_board_approval") continue;
+    const payload = approval.payload;
+    if (!payload || typeof payload !== "object") continue;
+    const governedActions = (payload as { governedActions?: unknown }).governedActions;
+    if (!Array.isArray(governedActions)) continue;
+    for (const action of governedActions) {
+      if (typeof action !== "string") continue;
+      const normalized = action.trim();
+      if (normalized) approvedActions.add(normalized);
+    }
+  }
+  return Array.from(approvedActions);
+}
+
+function executionPolicyHasGovernedActions(policy: NormalizedExecutionPolicy | null) {
+  const governedActions = policy?.authorizationPolicy?.governedActions;
+  return Array.isArray(governedActions) && governedActions.some((action) => typeof action === "string" && action.trim());
+}
+
 function hasExecutionParticipant(value: unknown) {
   const state = parseIssueExecutionState(value);
   if (!state || state.status !== "pending") return false;
@@ -1135,6 +1160,11 @@ export function issueRoutes(
   const projectsSvc = projectService(db);
   const goalsSvc = goalService(db);
   const issueApprovalsSvc = issueApprovalService(db);
+  const collectApprovedGovernedActionsForIssue = async (issueId: string, policy: NormalizedExecutionPolicy | null) => {
+    if (!executionPolicyHasGovernedActions(policy)) return [];
+    const linkedApprovals = await issueApprovalsSvc.listApprovalsForIssue(issueId);
+    return collectApprovedGovernedActionsFromLinkedApprovals(linkedApprovals);
+  };
   const recoveryActionsSvc = issueRecoveryActionService(db);
   const executionWorkspacesSvc = executionWorkspaceServiceDirect(db);
   const workProductsSvc = workProductService(db);
@@ -5927,6 +5957,7 @@ export function issueRoutes(
       req.body.executionPolicy !== undefined && monitorChanged,
     );
 
+    const approvedGovernedActions = await collectApprovedGovernedActionsForIssue(existing.id, nextExecutionPolicy);
     const transition = applyIssueExecutionPolicyTransition({
       issue: existing,
       policy: nextExecutionPolicy,
@@ -5944,6 +5975,7 @@ export function issueRoutes(
       commentBody,
       reviewRequest: reviewRequest === undefined ? undefined : reviewRequest,
       monitorExplicitlyUpdated: req.body.executionPolicy !== undefined && monitorChanged,
+      approvedGovernedActions,
     });
     const decisionId = transition.decision ? randomUUID() : null;
     if (decisionId) {
@@ -7745,6 +7777,7 @@ export function issueRoutes(
     // comment is inserted would leave an orphan comment without the corresponding state change.
     let comment: Awaited<ReturnType<typeof svc.addComment>>;
     if (shouldAutoApproveReviewComment) {
+      const approvedGovernedActions = await collectApprovedGovernedActionsForIssue(currentIssue.id, currentExecutionPolicy);
       const transition = applyIssueExecutionPolicyTransition({
         issue: currentIssue,
         policy: currentExecutionPolicy,
@@ -7755,6 +7788,7 @@ export function issueRoutes(
           userId: actor.actorType === "user" ? actor.actorId : null,
         },
         commentBody: req.body.body,
+        approvedGovernedActions,
       });
       const decisionId = transition.decision ? randomUUID() : null;
       if (decisionId) {

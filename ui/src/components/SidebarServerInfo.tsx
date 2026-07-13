@@ -3,11 +3,12 @@ import { Clock3, GitCommit, type LucideIcon } from "lucide-react";
 import { healthApi, type HealthStatus } from "@/api/health";
 import { instanceSettingsApi } from "@/api/instanceSettings";
 import { queryKeys } from "@/lib/queryKeys";
+import { useTranslation } from "@/i18n";
 
-function formatTimestamp(value: string | null | undefined): string {
-  if (!value) return "Unavailable";
+function formatTimestamp(value: string | null | undefined, unavailableLabel: string): string {
+  if (!value) return unavailableLabel;
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Unavailable";
+  if (Number.isNaN(date.getTime())) return unavailableLabel;
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
@@ -22,9 +23,9 @@ function restartTimestamp(health: HealthStatus | undefined): string | null {
   return health?.devServer?.lastRestartAt ?? health?.serverInfo?.processStartedAt ?? null;
 }
 
-function commitLabel(health: HealthStatus | undefined): string {
+function commitLabel(health: HealthStatus | undefined, unavailableLabel: string): string {
   const git = health?.serverInfo?.git;
-  if (!git?.available) return "Commit unavailable";
+  if (!git?.available) return unavailableLabel;
   return `${git.shortSha} · ${git.subject}`;
 }
 
@@ -59,6 +60,7 @@ function ServerInfoRow({
 }
 
 export function SidebarServerInfo() {
+  const { t } = useTranslation();
   const experimentalQuery = useQuery({
     queryKey: queryKeys.instance.experimentalSettings,
     queryFn: () => instanceSettingsApi.getExperimental(),
@@ -77,29 +79,35 @@ export function SidebarServerInfo() {
   const healthUnavailable = healthQuery.isError;
   const restartedAt = restartTimestamp(health);
   const restartedAtIsValid = isValidTimestamp(restartedAt);
+  const healthUnavailableLabel = t("serverInfo.healthUnavailable", { defaultValue: "Health unavailable" });
+  const loadingLabel = t("serverInfo.loading", { defaultValue: "Loading..." });
   const lastRestartedLabel = healthUnavailable
-    ? "Health unavailable"
+    ? healthUnavailableLabel
     : isWaitingForHealth
-      ? "Loading..."
-      : formatTimestamp(restartedAt);
+      ? loadingLabel
+      : formatTimestamp(restartedAt, t("serverInfo.unavailable", { defaultValue: "Unavailable" }));
   const commit = healthUnavailable
-    ? "Health unavailable"
+    ? healthUnavailableLabel
     : isWaitingForHealth
-      ? "Loading..."
-      : commitLabel(health);
+      ? loadingLabel
+      : commitLabel(health, t("serverInfo.commitUnavailable", { defaultValue: "Commit unavailable" }));
 
   return (
     <div className="mt-2 border-t border-border pt-2">
       <p className="px-3 pb-1 pt-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-        Server
+        {t("serverInfo.server", { defaultValue: "Server" })}
       </p>
       <ServerInfoRow
         icon={Clock3}
-        label="Last restarted"
+        label={t("serverInfo.lastRestarted", { defaultValue: "Last restarted" })}
         value={lastRestartedLabel}
         dateTime={!healthUnavailable && !isWaitingForHealth && restartedAtIsValid ? restartedAt : null}
       />
-      <ServerInfoRow icon={GitCommit} label="Running commit" value={commit} />
+      <ServerInfoRow
+        icon={GitCommit}
+        label={t("serverInfo.runningCommit", { defaultValue: "Running commit" })}
+        value={commit}
+      />
     </div>
   );
 }

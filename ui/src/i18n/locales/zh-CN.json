@@ -1,9 +1,99 @@
 {
   "app": {
+    "loading": "加载中...",
     "noCompanies": {
       "title": "创建您的第一家公司",
       "description": "通过创建公司开始。",
       "newCompany": "新公司"
     }
+  },
+  "sidebar": {
+    "openSearch": "打开搜索",
+    "keepExpanded": "保持侧边栏展开",
+    "expand": "展开侧边栏",
+    "collapse": "收起侧边栏",
+    "newTask": "新建任务",
+    "dashboard": "仪表盘",
+    "inbox": "收件箱",
+    "unread": "未读",
+    "conferenceRoom": "会议室",
+    "work": "工作",
+    "tasks": "任务",
+    "routines": "例程",
+    "pipelines": "流水线",
+    "goals": "目标",
+    "artifacts": "成果",
+    "skills": "技能",
+    "workspaces": "工作区",
+    "projects": "项目",
+    "agents": "智能体",
+    "company": "公司",
+    "org": "组织",
+    "costs": "成本",
+    "activity": "活动",
+    "settings": "设置"
+  },
+  "mobileNav": {
+    "ariaLabel": "移动端导航",
+    "home": "首页",
+    "tasks": "任务",
+    "create": "新建",
+    "agents": "智能体",
+    "inbox": "收件箱"
+  },
+  "account": {
+    "openMenu": "打开账号菜单",
+    "signedIn": "已登录",
+    "localWorkspaceBoard": "本地工作区看板",
+    "accountBadge": "账号",
+    "localBadge": "本地",
+    "viewProfile": "查看个人资料",
+    "viewProfileDescription": "打开您的活动、任务和用量记录。",
+    "editProfile": "编辑个人资料",
+    "editProfileDescription": "更新显示名称和头像。",
+    "documentation": "文档",
+    "documentationDescription": "在新标签页打开 Paperclip 文档。",
+    "feedback": "反馈",
+    "feedbackDescription": "分享反馈或报告问题。",
+    "signingOut": "正在退出...",
+    "signOut": "退出登录",
+    "signOutDescription": "结束此浏览器会话。",
+    "language": {
+      "label": "语言",
+      "description": "选择看板界面语言。"
+    }
+  },
+  "auth": {
+    "loading": "加载中...",
+    "authenticationFailed": "认证失败",
+    "signInTitle": "登录 Paperclip",
+    "signUpTitle": "创建 Paperclip 账号",
+    "signInDescription": "使用邮箱和密码访问此实例。",
+    "signUpDescription": "为此实例创建账号。v1 不需要邮箱确认。",
+    "requiredFields": "请填写所有必填字段。",
+    "name": "姓名",
+    "email": "邮箱",
+    "password": "密码",
+    "working": "处理中...",
+    "signInButton": "登录",
+    "createAccountButton": "创建账号",
+    "needAccount": "需要账号？",
+    "haveAccount": "已有账号？",
+    "createOne": "创建一个",
+    "signInLink": "登录"
+  },
+  "theme": {
+    "switchToLight": "切换到浅色模式",
+    "switchToDark": "切换到深色模式",
+    "description": "切换应用外观。"
+  },
+  "serverInfo": {
+    "unavailable": "不可用",
+    "commitUnavailable": "提交不可用",
+    "healthUnavailable": "健康状态不可用",
+    "loading": "加载中...",
+    "server": "服务器",
+    "lastRestarted": "上次重启",
+    "runningCommit": "运行提交"
   }
 }

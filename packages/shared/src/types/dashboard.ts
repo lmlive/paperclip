@@ -34,3 +34,34 @@ export interface DashboardSummary {
   };
   runActivity: DashboardRunActivityDay[];
 }
+
+export interface SoloCompanyDashboardMetrics {
+  activeAgents: number;
+  runningRuns: number;
+  pendingApprovals: number;
+  blockedIssues: number;
+  monthlySpendCents: number;
+  doneThisWeek: number;
+}
+
+export interface SoloCompanyDashboardRecommendation {
+  id: string;
+  label: string;
+  description: string;
+  actionHref?: string;
+}
+
+export interface SoloCompanyDashboardSummary {
+  company: import("./company.js").Company;
+  metrics: SoloCompanyDashboardMetrics;
+  attention: {
+    approvals: import("./approval.js").Approval[];
+    blockers: import("./issue.js").Issue[];
+    failedRuns: import("./heartbeat.js").HeartbeatRun[];
+  };
+  employees: import("./agent.js").Agent[];
+  projects: import("./project.js").Project[];
+  startupIssues: import("./issue.js").Issue[];
+  recentArtifacts: import("./work-product.js").IssueWorkProduct[];
+  ceoRecommendations: SoloCompanyDashboardRecommendation[];
+}

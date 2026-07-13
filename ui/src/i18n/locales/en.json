@@ -1,9 +1,99 @@
 {
   "app": {
+    "loading": "Loading...",
     "noCompanies": {
       "title": "Create your first company",
       "description": "Get started by creating a company.",
       "newCompany": "New Company"
     }
+  },
+  "sidebar": {
+    "openSearch": "Open search",
+    "keepExpanded": "Keep sidebar expanded",
+    "expand": "Expand sidebar",
+    "collapse": "Collapse sidebar",
+    "newTask": "New Task",
+    "dashboard": "Dashboard",
+    "inbox": "Inbox",
+    "unread": "unread",
+    "conferenceRoom": "Conference Room",
+    "work": "Work",
+    "tasks": "Tasks",
+    "routines": "Routines",
+    "pipelines": "Pipelines",
+    "goals": "Goals",
+    "artifacts": "Artifacts",
+    "skills": "Skills",
+    "workspaces": "Workspaces",
+    "projects": "Projects",
+    "agents": "Agents",
+    "company": "Company",
+    "org": "Org",
+    "costs": "Costs",
+    "activity": "Activity",
+    "settings": "Settings"
+  },
+  "mobileNav": {
+    "ariaLabel": "Mobile navigation",
+    "home": "Home",
+    "tasks": "Tasks",
+    "create": "Create",
+    "agents": "Agents",
+    "inbox": "Inbox"
+  },
+  "account": {
+    "openMenu": "Open account menu",
+    "signedIn": "Signed in",
+    "localWorkspaceBoard": "Local workspace board",
+    "accountBadge": "Account",
+    "localBadge": "Local",
+    "viewProfile": "View profile",
+    "viewProfileDescription": "Open your activity, task, and usage ledger.",
+    "editProfile": "Edit profile",
+    "editProfileDescription": "Update your display name and avatar.",
+    "documentation": "Documentation",
+    "documentationDescription": "Open Paperclip docs in a new tab.",
+    "feedback": "Feedback",
+    "feedbackDescription": "Share feedback or report an issue.",
+    "signingOut": "Signing out...",
+    "signOut": "Sign out",
+    "signOutDescription": "End this browser session.",
+    "language": {
+      "label": "Language",
+      "description": "Choose the board interface language."
+    }
+  },
+  "auth": {
+    "loading": "Loading...",
+    "authenticationFailed": "Authentication failed",
+    "signInTitle": "Sign in to Paperclip",
+    "signUpTitle": "Create your Paperclip account",
+    "signInDescription": "Use your email and password to access this instance.",
+    "signUpDescription": "Create an account for this instance. Email confirmation is not required in v1.",
+    "requiredFields": "Please fill in all required fields.",
+    "name": "Name",
+    "email": "Email",
+    "password": "Password",
+    "working": "Working...",
+    "signInButton": "Sign In",
+    "createAccountButton": "Create Account",
+    "needAccount": "Need an account?",
+    "haveAccount": "Already have an account?",
+    "createOne": "Create one",
+    "signInLink": "Sign in"
+  },
+  "theme": {
+    "switchToLight": "Switch to light mode",
+    "switchToDark": "Switch to dark mode",
+    "description": "Toggle the app appearance."
+  },
+  "serverInfo": {
+    "unavailable": "Unavailable",
+    "commitUnavailable": "Commit unavailable",
+    "healthUnavailable": "Health unavailable",
+    "loading": "Loading...",
+    "server": "Server",
+    "lastRestarted": "Last restarted",
+    "runningCommit": "Running commit"
   }
 }

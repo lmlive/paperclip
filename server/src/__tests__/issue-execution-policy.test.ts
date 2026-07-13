@@ -162,6 +162,55 @@ describe("parseIssueExecutionState", () => {
 });
 
 describe("issue execution policy transitions", () => {
+  describe("governed action approval binding", () => {
+    const governedPolicy = normalizeIssueExecutionPolicy({
+      stages: [],
+      authorizationPolicy: {
+        governedActions: ["production_deploy", "credential_or_secret_change"],
+      },
+    })!;
+
+    it("blocks completing a governed issue without approved linked action scope", () => {
+      expect(() =>
+        applyIssueExecutionPolicyTransition({
+          issue: {
+            status: "in_progress",
+            assigneeAgentId: coderAgentId,
+            assigneeUserId: null,
+            executionPolicy: governedPolicy,
+            executionState: null,
+          },
+          policy: governedPolicy,
+          requestedStatus: "done",
+          requestedAssigneePatch: {},
+          actor: { agentId: coderAgentId },
+          commentBody: "Deploying to production",
+          approvedGovernedActions: ["production_deploy"],
+        }),
+      ).toThrow("Governed action requires approved board approval");
+    });
+
+    it("allows completing a governed issue when every governed action has approved linked scope", () => {
+      const result = applyIssueExecutionPolicyTransition({
+        issue: {
+          status: "in_progress",
+          assigneeAgentId: coderAgentId,
+          assigneeUserId: null,
+          executionPolicy: governedPolicy,
+          executionState: null,
+        },
+        policy: governedPolicy,
+        requestedStatus: "done",
+        requestedAssigneePatch: {},
+        actor: { agentId: coderAgentId },
+        commentBody: "Deploying approved scope",
+        approvedGovernedActions: ["production_deploy", "credential_or_secret_change"],
+      });
+
+      expect(result.patch).toEqual({});
+    });
+  });
+
   describe("happy path: executor → review → approval → done", () => {
     const policy = twoStagePolicy();
 

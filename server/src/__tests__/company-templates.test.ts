@@ -20,6 +20,7 @@ import {
 } from "./helpers/embedded-postgres.js";
 import { companyService } from "../services/companies.js";
 import { companyTemplateService } from "../services/company-templates.js";
+import { soloCompanyDashboardService } from "../services/solo-company-dashboard.js";
 
 const embeddedPostgresSupport = await getEmbeddedPostgresTestSupport();
 const describeEmbeddedPostgres = embeddedPostgresSupport.supported ? describe : describe.skip;
@@ -191,5 +192,26 @@ describeEmbeddedPostgres("companyTemplateService", () => {
       approvalCount: 1,
     });
     expect(activityRows.some((row) => row.action === "approval.created")).toBe(true);
+
+    const soloDashboard = await soloCompanyDashboardService(db).summary(company.id);
+    expect(soloDashboard.company.id).toBe(company.id);
+    expect(soloDashboard.metrics).toMatchObject({
+      activeAgents: 5,
+      pendingApprovals: 1,
+      blockedIssues: 0,
+      monthlySpendCents: 0,
+    });
+    expect(soloDashboard.employees.map((agent) => agent.name)).toEqual([
+      "CEO",
+      "PM",
+      "Tech Lead",
+      "Engineer",
+      "QA/Ops",
+    ]);
+    expect(soloDashboard.startupIssues).toHaveLength(6);
+    expect(soloDashboard.attention.approvals[0]?.payload).toMatchObject({
+      title: "Approve solo company Task → Approval → Execute policy",
+    });
+    expect(soloDashboard.ceoRecommendations.map((recommendation) => recommendation.id)).toContain("review-approvals");
   });
 });

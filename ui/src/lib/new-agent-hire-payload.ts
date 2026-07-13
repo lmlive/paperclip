@@ -2,6 +2,11 @@ import type { CreateConfigValues } from "../components/AgentConfigForm";
 import { buildNewAgentRuntimeConfig } from "./new-agent-runtime-config";
 import type { AgentPermissions } from "@paperclipai/shared";
 
+interface NewAgentInstructionsBundleInput {
+  readonly entryFile?: string;
+  readonly files: Record<string, string>;
+}
+
 export function buildNewAgentHirePayload(input: {
   name: string;
   effectiveRole: string;
@@ -11,6 +16,9 @@ export function buildNewAgentHirePayload(input: {
   configValues: CreateConfigValues;
   adapterConfig: Record<string, unknown>;
   permissions?: Partial<AgentPermissions>;
+  capabilities?: string | null;
+  metadata?: Record<string, unknown>;
+  instructionsBundle?: NewAgentInstructionsBundleInput;
 }) {
   const {
     name,
@@ -21,12 +29,16 @@ export function buildNewAgentHirePayload(input: {
     configValues,
     adapterConfig,
     permissions,
+    capabilities,
+    metadata,
+    instructionsBundle,
   } = input;
 
   return {
     name: name.trim(),
     role: effectiveRole,
     ...(title?.trim() ? { title: title.trim() } : {}),
+    ...(capabilities?.trim() ? { capabilities: capabilities.trim() } : {}),
     ...(reportsTo ? { reportsTo } : {}),
     ...(selectedSkillKeys.length > 0 ? { desiredSkills: selectedSkillKeys } : {}),
     adapterType: configValues.adapterType,
@@ -40,5 +52,7 @@ export function buildNewAgentHirePayload(input: {
     }),
     budgetMonthlyCents: 0,
     ...(permissions ? { permissions } : {}),
+    ...(metadata ? { metadata } : {}),
+    ...(instructionsBundle ? { instructionsBundle } : {}),
   };
 }

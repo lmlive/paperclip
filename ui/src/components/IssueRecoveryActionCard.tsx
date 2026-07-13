@@ -27,6 +27,7 @@ export const deriveRecoveryCardState = deriveRecoveryDisplayState;
 export type RecoveryResolveOutcome =
   | "todo"
   | "done"
+  | "cancelled"
   | "in_review"
   | "false_positive_done"
   | "false_positive_in_review";
@@ -309,6 +310,12 @@ const RESOLVE_OPTIONS: Array<{
     outcome: "done",
     label: "Mark task done",
     description: "Restore by recording the requested work as complete.",
+  },
+  {
+    outcome: "cancelled",
+    label: "Cancel task",
+    description: "Record that this task is intentionally stopped.",
+    destructive: true,
   },
   {
     outcome: "in_review",

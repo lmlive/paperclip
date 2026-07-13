@@ -56,7 +56,7 @@ type CreateWorkspaceInput = {
 };
 type UpdateWorkspaceInput = Partial<CreateWorkspaceInput>;
 
-interface ProjectWithGoals extends Omit<ProjectRow, "executionWorkspacePolicy"> {
+export interface ProjectWithGoals extends Omit<ProjectRow, "executionWorkspacePolicy"> {
   urlKey: string;
   goalIds: string[];
   goals: ProjectGoalRef[];

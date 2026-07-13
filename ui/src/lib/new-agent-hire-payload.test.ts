@@ -90,4 +90,41 @@ describe("buildNewAgentHirePayload", () => {
       },
     });
   });
+
+  it("includes solo preset metadata, capabilities, and managed instructions when provided", () => {
+    expect(
+      buildNewAgentHirePayload({
+        name: "Engineer",
+        effectiveRole: "engineer",
+        configValues: {
+          ...defaultCreateValues,
+          adapterType: "hermes_local",
+        },
+        adapterConfig: { timeoutSec: 300 },
+        capabilities: "Implements assigned product work.",
+        metadata: {
+          companyTemplateId: "solo_software_company",
+          employeeTemplateId: "engineer",
+        },
+        instructionsBundle: {
+          entryFile: "AGENTS.md",
+          files: {
+            "AGENTS.md": "# Engineer",
+          },
+        },
+      }),
+    ).toMatchObject({
+      capabilities: "Implements assigned product work.",
+      metadata: {
+        companyTemplateId: "solo_software_company",
+        employeeTemplateId: "engineer",
+      },
+      instructionsBundle: {
+        entryFile: "AGENTS.md",
+        files: {
+          "AGENTS.md": "# Engineer",
+        },
+      },
+    });
+  });
 });

@@ -4,12 +4,13 @@ import { act } from "react";
 import type { ComponentProps, ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { Agent, Approval, DashboardSummary, Issue } from "@paperclipai/shared";
+import type { Agent, Approval, DashboardSummary, Issue, SoloCompanyDashboardSummary } from "@paperclipai/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Dashboard } from "./Dashboard";
 
 const apiMocks = vi.hoisted(() => ({
   dashboardSummary: vi.fn(),
+  soloDashboardSummary: vi.fn(),
   activityList: vi.fn(),
   userDirectoryList: vi.fn(),
   issuesList: vi.fn(),
@@ -45,7 +46,10 @@ vi.mock("../context/BreadcrumbContext", () => ({
 }));
 
 vi.mock("../api/dashboard", () => ({
-  dashboardApi: { summary: apiMocks.dashboardSummary },
+  dashboardApi: {
+    summary: apiMocks.dashboardSummary,
+    soloSummary: apiMocks.soloDashboardSummary,
+  },
 }));
 
 vi.mock("../api/activity", () => ({
@@ -196,6 +200,71 @@ const summary: DashboardSummary = {
   runActivity: [],
 };
 
+const soloSummary: SoloCompanyDashboardSummary = {
+  company: {
+    id: "company-1",
+    name: "Solo Software Co",
+    description: null,
+    status: "active",
+    pauseReason: null,
+    pausedAt: null,
+    issuePrefix: "SOL",
+    issueCounter: 2,
+    budgetMonthlyCents: 0,
+    spentMonthlyCents: 0,
+    attachmentMaxBytes: 0,
+    requireBoardApprovalForNewAgents: false,
+    feedbackDataSharingEnabled: false,
+    feedbackDataSharingConsentAt: null,
+    feedbackDataSharingConsentByUserId: null,
+    feedbackDataSharingTermsVersion: null,
+    brandColor: null,
+    logoAssetId: null,
+    logoUrl: null,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+  },
+  metrics: {
+    activeAgents: 5,
+    runningRuns: 0,
+    pendingApprovals: 1,
+    blockedIssues: 1,
+    monthlySpendCents: 0,
+    doneThisWeek: 0,
+  },
+  attention: {
+    approvals: [makeApproval()],
+    blockers: [makeIssue({ id: "issue-2", identifier: "SOL-2", title: "Blocked setup", status: "blocked" })],
+    failedRuns: [],
+  },
+  employees: [
+    makeAgent("ceo"),
+    makeAgent("pm"),
+    makeAgent("tech_lead"),
+    makeAgent("engineer"),
+    makeAgent("qa_ops"),
+  ],
+  projects: [],
+  startupIssues: [
+    makeIssue(),
+    makeIssue({ id: "issue-2", identifier: "SOL-2", title: "Blocked setup", status: "blocked" }),
+  ],
+  recentArtifacts: [],
+  ceoRecommendations: [
+    {
+      id: "review-approvals",
+      label: "Review board approvals",
+      description: "Clear pending governed-action decisions before AI employees execute risky work.",
+      actionHref: "/approvals",
+    },
+    {
+      id: "start-ceo-loop",
+      label: "Start CEO loop",
+      description: "Have the CEO review the 7-day plan, current blockers, approvals, and next delegation step.",
+    },
+  ],
+};
+
 async function flushReact() {
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -231,6 +300,7 @@ describe("Dashboard solo company cockpit", () => {
     container = document.createElement("div");
     document.body.appendChild(container);
     apiMocks.dashboardSummary.mockResolvedValue(summary);
+    apiMocks.soloDashboardSummary.mockResolvedValue(soloSummary);
     apiMocks.activityList.mockResolvedValue([]);
     apiMocks.userDirectoryList.mockResolvedValue({ users: [] });
     apiMocks.projectsList.mockResolvedValue([]);
@@ -276,13 +346,13 @@ describe("Dashboard solo company cockpit", () => {
     expect(document.body.textContent).toContain("QA/Ops");
     expect(document.body.textContent).toContain("Draft the first 7-day company action plan");
     expect(document.body.textContent).toContain("Start CEO loop");
+    expect(apiMocks.soloDashboardSummary).toHaveBeenCalledWith("company-1");
   });
 
   it("surfaces pending approvals in the solo cockpit", async () => {
     root = renderDashboard(container);
     await flushReact();
 
-    expect(apiMocks.approvalsList).toHaveBeenCalledWith("company-1", "pending");
     expect(document.body.textContent).toContain("Pending board approvals");
     expect(document.body.textContent).toContain("Approve solo company Task → Approval → Execute policy");
     expect(document.body.textContent).toContain("Requested by");
